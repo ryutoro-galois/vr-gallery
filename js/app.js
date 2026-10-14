@@ -117,7 +117,7 @@ AFRAME.registerComponent('info-panel', {
       this.current = el;
       this.show(data);
       this.placeAbove(el);
-      this.playAudio(data.audio);
+      this.playAudio(data.audio, el);
     });
   },
 
@@ -135,13 +135,36 @@ AFRAME.registerComponent('info-panel', {
     this.el.classList.remove('clickable');
   },
 
-  // 解説音声：1つの Audio を使い回し、別の展示物を選んだら切り替え、閉じたら止める
-  playAudio: function (src) {
+  // 解説音声：1つの Audio を使い回し、別の展示物を選んだら切り替え、閉じたら止める。
+  // Web Audio の PositionalAudio に通し、選んだ展示物の位置から聞こえるようにする
+  playAudio: function (src, target) {
     this.audio.pause();
     if (!src) return;
+    const sound = this.getSpatialSound();
+    target.object3D.add(sound);
+    // AudioContext はユーザー操作（クリック／トリガー）の中で再開する必要がある
+    sound.context.resume();
     this.audio.src = src;
     this.audio.currentTime = 0;
     this.audio.play().catch((err) => console.warn('解説音声を再生できませんでした:', err.message));
+  },
+
+  // 初回の再生時に作る（ページを開いた直後に AudioContext を作ると、ブラウザに止められるため）
+  getSpatialSound: function () {
+    if (this.sound) return this.sound;
+    const scene = this.el.sceneEl;
+    // A-Frame の sound コンポーネントと同じく、リスナーはカメラに付けて頭の向きに追従させる
+    const listener = scene.audioListener || (scene.audioListener = new THREE.AudioListener());
+    if (listener.parent !== scene.camera) scene.camera.add(listener);
+    scene.addEventListener('camera-set-active', () => scene.camera.add(listener));
+
+    this.sound = new THREE.PositionalAudio(listener);
+    this.sound.setMediaElementSource(this.audio);
+    // 立ち位置から展示物まで約2.2m。距離で小さくなりすぎないよう減衰をゆるめにする
+    this.sound.setDistanceModel('inverse');
+    this.sound.setRefDistance(1.5);
+    this.sound.setRolloffFactor(0.8);
+    return this.sound;
   },
 
   placeAbove: function (target) {

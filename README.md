@@ -126,7 +126,7 @@ exhibit="title: タイトル; body: 説明文; color: #e8a33d; audio: audio/xxx.
 |---|---|
 | `title` / `body` | 説明パネルに出すタイトルと本文 |
 | `color` | ホバー時の発光色とパネルの帯の色 |
-| `audio` | 選んだときに流す解説音声（省略すると音なし）。パネルを閉じるか別の展示物を選ぶと止まります |
+| `audio` | 選んだときに流す解説音声（省略すると音なし）。展示物の位置から聞こえる立体音響で再生します。パネルを閉じるか別の展示物を選ぶと止まります |
 
 ### 3Dモデルを展示する
 
@@ -164,5 +164,7 @@ say -v Kyoko -o narration.aiff "ここに解説文を入れます。"
 ```bash
 afconvert -f m4af -d aac -c 1 -b 64000 narration.aiff audio/narration.m4a
 ```
+
+音声は Web Audio の立体音響（three.js の `PositionalAudio`、HRTF）で、選んだ展示物の位置から流れます。頭の向きを変えると聞こえる方向も変わります。距離による減衰の強さは、`js/app.js` の `setRefDistance` と `setRolloffFactor` で調整できます。
 
 音声は「VRを開始」ボタンを押した後や、展示物をクリックしたときに再生されます。ブラウザは、ユーザーが操作する前に音を自動再生することを許可していないためです。

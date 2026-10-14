@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VR展示室</title>
+  <!-- A-Frame 1.7.1 を vendor/ に同梱（バージョン固定・CDN非依存） -->
+  <script src="vendor/aframe-v1.7.1.min.js"></script>
+  <script src="js/app.js"></script>
+  <style>
+    html, body { margin: 0; height: 100%; background: #1b1f27; font-family: system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif; }
+    #overlay {
+      position: fixed; top: 16px; left: 16px; z-index: 10; max-width: min(360px, calc(100vw - 32px));
+      padding: 16px 18px; border-radius: 12px; color: #eef1f6;
+      background: rgba(17, 21, 28, 0.86); box-shadow: 0 6px 24px rgba(0,0,0,.35);
+    }
+    #overlay h1 { margin: 0 0 6px; font-size: 18px; }
+    #overlay p { margin: 6px 0; font-size: 13px; line-height: 1.6; color: #c3cad6; }
+    #enter-vr {
+      margin-top: 8px; width: 100%; padding: 14px 16px; border: 0; border-radius: 10px;
+      font-size: 17px; font-weight: 700; color: #0d1117; background: #7fdcff; cursor: pointer;
+    }
+    #enter-vr:disabled { background: #4a5260; color: #aab2bf; cursor: not-allowed; }
+    #status { min-height: 1.6em; }
+    .a-enter-vr, .a-enter-ar { display: none !important; }
+  </style>
+</head>
+<body>
+  <div id="overlay">
+    <h1>VR展示室</h1>
+    <p>PC：ドラッグで見回し、展示物をクリックすると説明が出ます。</p>
+    <p>Quest：下のボタンでVR開始 → レーザーを向けてトリガー。</p>
+    <button id="enter-vr" type="button" disabled>VRを開始</button>
+    <p id="status">WebXR対応を確認中…</p>
+  </div>
+
+  <a-scene
+    xr-mode-ui="enabled: false"
+    loading-screen="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+    renderer="antialias: true; foveationLevel: 1; maxCanvasWidth: 1920; maxCanvasHeight: 1920"
+    webxr="referenceSpaceType: local-floor"
+    background="color: #1b1f27">
+
+    <!-- 照明（影なしで軽量に） -->
+    <a-entity light="type: ambient; color: #ffffff; intensity: 0.65"></a-entity>
+    <a-entity light="type: directional; color: #fff4e0; intensity: 0.8" position="1 4 2"></a-entity>
+
+    <!-- 部屋：6m x 6m、高さ3m。壁・床・天井は flat シェーダで負荷を抑える -->
+    <a-entity id="room">
+      <a-plane rotation="-90 0 0" width="6" height="6" material="shader: flat; color: #3a3f4b"></a-plane>
+      <a-plane rotation="90 0 0" position="0 3 0" width="6" height="6" material="shader: flat; color: #d9d6cf"></a-plane>
+      <a-plane position="0 1.5 -3" width="6" height="3" material="shader: flat; color: #ece8e1"></a-plane>
+      <a-plane position="0 1.5 3" rotation="0 180 0" width="6" height="3" material="shader: flat; color: #e4e0d8"></a-plane>
+      <a-plane position="-3 1.5 0" rotation="0 90 0" width="6" height="3" material="shader: flat; color: #e0dcd4"></a-plane>
+      <a-plane position="3 1.5 0" rotation="0 -90 0" width="6" height="3" material="shader: flat; color: #e0dcd4"></a-plane>
+      <!-- 立ち位置の目印 -->
+      <a-ring rotation="-90 0 0" position="0 0.005 0" radius-inner="0.32" radius-outer="0.38" segments-theta="48"
+              material="shader: flat; color: #7fdcff"></a-ring>
+    </a-entity>
+
+    <!-- 展示物：台座（装飾）＋本体（.clickable） -->
+    <a-entity position="0 0 -2.2">
+      <a-cylinder radius="0.3" height="0.9" position="0 0.45 0" segments-radial="24" color="#596273"></a-cylinder>
+      <a-torus-knot radius="0.2" radius-tubular="0.055" p="2" q="3" segments-tubular="96" segments-radial="10"
+        position="0 1.25 0" color="#e8a33d" material="roughness: 0.4; metalness: 0.2"
+        animation="property: rotation; to: 0 360 0; loop: true; dur: 24000; easing: linear"
+        exhibit="title: 結び目（トーラスノット）; body: 1本の管がドーナツの表面を2周・3周の割合でぐるりと巻きついた形です。どこから見ても違う表情を見せ、終わりのない一筆書きになっています。; color: #e8a33d"></a-torus-knot>
+    </a-entity>
+
+    <a-entity position="-2.1 0 -0.8">
+      <a-cylinder radius="0.3" height="0.9" position="0 0.45 0" segments-radial="24" color="#596273"></a-cylinder>
+      <a-box width="0.38" height="0.38" depth="0.38" position="0 1.15 0" rotation="35 45 0" color="#4fb3a9"
+        material="roughness: 0.6"
+        animation="property: rotation; to: 35 405 0; loop: true; dur: 30000; easing: linear"
+        exhibit="title: 立方体; body: 6つの正方形の面、12本の辺、8つの頂点をもつ正多面体です。角を下にして傾けると、見る向きによって六角形のシルエットが現れます。; color: #4fb3a9"></a-box>
+    </a-entity>
+
+    <a-entity position="2.1 0 -0.8">
+      <a-cylinder radius="0.3" height="0.9" position="0 0.45 0" segments-radial="24" color="#596273"></a-cylinder>
+      <a-icosahedron radius="0.24" position="0 1.17 0" color="#c56bd6"
+        material="roughness: 0.5; flatShading: true"
+        animation="property: rotation; to: 360 360 0; loop: true; dur: 36000; easing: linear"
+        exhibit="title: 正二十面体; body: 20枚の正三角形でできた正多面体です。5つの面が1つの頂点に集まり、球に最も近い正多面体として、サイコロやウイルスの殻の形にも見られます。; color: #c56bd6"></a-icosahedron>
+    </a-entity>
+
+    <!-- 説明パネル（Canvasで日本語を描画） -->
+    <a-entity id="info-panel" position="0 1.95 -1.9"
+      geometry="primitive: plane; width: 1.2; height: 0.6"
+      material="shader: flat; transparent: true; side: double"
+      info-panel></a-entity>
+
+    <!-- カメラ：移動なし（wasd-controls なし）。PCではマウスドラッグで見回し、クリックで選択 -->
+    <a-entity id="camera" camera position="0 1.6 0"
+      look-controls="pointerLockEnabled: false; magicWindowTrackingEnabled: false"
+      cursor="rayOrigin: mouse; fuse: false"
+      raycaster="objects: .clickable; far: 20"></a-entity>
+
+    <!-- 左右コントローラー：レーザー＋トリガーでクリック。標準モデルは読み込まず基本図形で表示 -->
+    <a-entity id="left-hand" laser-controls="hand: left; model: false"
+      raycaster="objects: .clickable; far: 8; lineColor: #7fdcff; lineOpacity: 0.85">
+      <a-box width="0.035" height="0.03" depth="0.11" position="0 -0.01 0.03" color="#2b3240"></a-box>
+    </a-entity>
+    <a-entity id="right-hand" laser-controls="hand: right; model: false"
+      raycaster="objects: .clickable; far: 8; lineColor: #ffd27f; lineOpacity: 0.85">
+      <a-box width="0.035" height="0.03" depth="0.11" position="0 -0.01 0.03" color="#2b3240"></a-box>
+    </a-entity>
+  </a-scene>
+</body>
+</html>

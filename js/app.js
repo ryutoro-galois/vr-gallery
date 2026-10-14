@@ -1,11 +1,13 @@
 /* global AFRAME, THREE */
 
 // 展示物：ホバーで発光、クリック（マウス／トリガー）で選択イベントを発行
+// 基本図形にも gltf-model にも付けられる。audio を指定すると選択時に解説音声を流す
 AFRAME.registerComponent('exhibit', {
   schema: {
     title: { type: 'string' },
     body: { type: 'string' },
-    color: { type: 'color', default: '#7fdcff' }
+    color: { type: 'color', default: '#7fdcff' },
+    audio: { type: 'string' }
   },
 
   init: function () {
@@ -14,16 +16,71 @@ AFRAME.registerComponent('exhibit', {
 
     this.el.addEventListener('mouseenter', () => {
       this.hoverCount++;
-      this.el.setAttribute('material', { emissive: this.data.color, emissiveIntensity: 0.35 });
+      this.setGlow(true);
     });
     this.el.addEventListener('mouseleave', () => {
       this.hoverCount = Math.max(0, this.hoverCount - 1);
-      if (this.hoverCount === 0) this.el.setAttribute('material', { emissiveIntensity: 0 });
+      if (this.hoverCount === 0) this.setGlow(false);
     });
     this.el.addEventListener('click', (evt) => {
       pulse(evt.detail && evt.detail.cursorEl);
       this.el.sceneEl.emit('exhibit-selected', { el: this.el, data: this.data });
     });
+  },
+
+  // メッシュのマテリアルを直接光らせる（3Dモデルの元の発光色は覚えておいて戻す）
+  setGlow: function (on) {
+    const mesh = this.el.getObject3D('mesh');
+    if (!mesh) return;
+    mesh.traverse((node) => {
+      [].concat(node.material || []).forEach((m) => {
+        if (!m.emissive) return;
+        const base = m.userData.baseEmissive ||
+          (m.userData.baseEmissive = { color: m.emissive.clone(), intensity: m.emissiveIntensity });
+        if (on) {
+          m.emissive.set(this.data.color);
+          m.emissiveIntensity = 0.35;
+        } else {
+          m.emissive.copy(base.color);
+          m.emissiveIntensity = base.intensity;
+        }
+      });
+    });
+  }
+});
+
+// 3Dモデルを指定サイズ（最大辺の長さ, m）に縮尺し、底面の中心をエンティティの原点に合わせる
+AFRAME.registerComponent('fit-size', {
+  schema: { type: 'number', default: 0.5 },
+
+  init: function () {
+    this.el.addEventListener('model-loaded', () => this.fit());
+  },
+
+  fit: function () {
+    const mesh = this.el.getObject3D('mesh');
+    const obj = this.el.object3D;
+    if (!mesh) return;
+
+    // 回転アニメーションの影響を受けないよう、一時的に回転・拡大を戻して測る
+    const quaternion = obj.quaternion.clone();
+    const scale = obj.scale.clone();
+    obj.quaternion.identity();
+    obj.scale.set(1, 1, 1);
+    mesh.position.set(0, 0, 0);
+    mesh.scale.set(1, 1, 1);
+    obj.updateWorldMatrix(true, true);
+
+    const box = new THREE.Box3().setFromObject(mesh);
+    const size = box.getSize(new THREE.Vector3());
+    const center = box.getCenter(new THREE.Vector3());
+    const origin = obj.getWorldPosition(new THREE.Vector3());
+    const k = this.data / (Math.max(size.x, size.y, size.z) || 1);
+    mesh.scale.setScalar(k);
+    mesh.position.set((origin.x - center.x) * k, (origin.y - box.min.y) * k, (origin.z - center.z) * k);
+
+    obj.quaternion.copy(quaternion);
+    obj.scale.copy(scale);
   }
 });
 
@@ -33,6 +90,7 @@ AFRAME.registerComponent('info-panel', {
 
   init: function () {
     this.current = null;
+    this.audio = new Audio();
     this.canvas = document.createElement('canvas');
     this.canvas.width = 1024;
     this.canvas.height = 512;
@@ -59,6 +117,7 @@ AFRAME.registerComponent('info-panel', {
       this.current = el;
       this.show(data);
       this.placeAbove(el);
+      this.playAudio(data.audio);
     });
   },
 
@@ -71,8 +130,18 @@ AFRAME.registerComponent('info-panel', {
 
   hide: function () {
     this.current = null;
+    this.playAudio('');
     this.el.object3D.visible = false;
     this.el.classList.remove('clickable');
+  },
+
+  // 解説音声：1つの Audio を使い回し、別の展示物を選んだら切り替え、閉じたら止める
+  playAudio: function (src) {
+    this.audio.pause();
+    if (!src) return;
+    this.audio.src = src;
+    this.audio.currentTime = 0;
+    this.audio.play().catch((err) => console.warn('解説音声を再生できませんでした:', err.message));
   },
 
   placeAbove: function (target) {
@@ -117,7 +186,8 @@ function drawCard(canvas, data) {
 
   ctx.fillStyle = '#8a93a3';
   ctx.font = '26px ' + font;
-  ctx.fillText('パネルを選択すると閉じます', pad, h - pad - 26);
+  ctx.fillText(data.audio ? '解説音声を再生中 ・ パネルを選択すると閉じて停止します' : 'パネルを選択すると閉じます',
+    pad, h - pad - 26);
 }
 
 // 日本語は文字単位で折り返す

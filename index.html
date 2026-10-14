@@ -59,13 +59,13 @@
               material="shader: flat; color: #7fdcff"></a-ring>
     </a-entity>
 
-    <!-- 展示物：台座（装飾）＋本体（.clickable） -->
+    <!-- 展示物：台座（装飾）＋本体（.clickable）。audio に解説音声のパスを指定 -->
     <a-entity position="0 0 -2.2">
       <a-cylinder radius="0.3" height="0.9" position="0 0.45 0" segments-radial="24" color="#596273"></a-cylinder>
-      <a-torus-knot radius="0.2" radius-tubular="0.055" p="2" q="3" segments-tubular="96" segments-radial="10"
-        position="0 1.25 0" color="#e8a33d" material="roughness: 0.4; metalness: 0.2"
+      <!-- 3Dモデル（GLB）。fit-size で最大辺0.5mに縮尺し、台座の上（y=0.9）に底面を合わせる -->
+      <a-entity position="0 0.9 0" gltf-model="url(models/vase.glb)" fit-size="0.5"
         animation="property: rotation; to: 0 360 0; loop: true; dur: 24000; easing: linear"
-        exhibit="title: 結び目（トーラスノット）; body: 1本の管がドーナツの表面を2周・3周の割合でぐるりと巻きついた形です。どこから見ても違う表情を見せ、終わりのない一筆書きになっています。; color: #e8a33d"></a-torus-knot>
+        exhibit="title: 花瓶（サンプルモデル）; body: 回転体として作った陶器風の花瓶のサンプルモデルです。models フォルダのGLBファイルを差し替えれば、好きな3Dモデルを展示できます。; color: #3b7fd4; audio: audio/vase.m4a"></a-entity>
     </a-entity>
 
     <a-entity position="-2.1 0 -0.8">
@@ -73,7 +73,7 @@
       <a-box width="0.38" height="0.38" depth="0.38" position="0 1.15 0" rotation="35 45 0" color="#4fb3a9"
         material="roughness: 0.6"
         animation="property: rotation; to: 35 405 0; loop: true; dur: 30000; easing: linear"
-        exhibit="title: 立方体; body: 6つの正方形の面、12本の辺、8つの頂点をもつ正多面体です。角を下にして傾けると、見る向きによって六角形のシルエットが現れます。; color: #4fb3a9"></a-box>
+        exhibit="title: 立方体; body: 6つの正方形の面、12本の辺、8つの頂点をもつ正多面体です。角を下にして傾けると、見る向きによって六角形のシルエットが現れます。; color: #4fb3a9; audio: audio/cube.m4a"></a-box>
     </a-entity>
 
     <a-entity position="2.1 0 -0.8">
@@ -81,7 +81,7 @@
       <a-icosahedron radius="0.24" position="0 1.17 0" color="#c56bd6"
         material="roughness: 0.5; flatShading: true"
         animation="property: rotation; to: 360 360 0; loop: true; dur: 36000; easing: linear"
-        exhibit="title: 正二十面体; body: 20枚の正三角形でできた正多面体です。5つの面が1つの頂点に集まり、球に最も近い正多面体として、サイコロやウイルスの殻の形にも見られます。; color: #c56bd6"></a-icosahedron>
+        exhibit="title: 正二十面体; body: 20枚の正三角形でできた正多面体です。5つの面が1つの頂点に集まり、球に最も近い正多面体として、サイコロやウイルスの殻の形にも見られます。; color: #c56bd6; audio: audio/icosahedron.m4a"></a-icosahedron>
     </a-entity>
 
     <!-- 説明パネル（Canvasで日本語を描画） -->

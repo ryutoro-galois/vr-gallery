@@ -1,13 +1,15 @@
 # VR展示室（A-Frame + WebXR / Meta Quest 3 向け）
 
-基本図形だけで作った小さなVR展示室です。ビルド不要の静的サイトなので、フォルダをそのままHTTPSで公開すれば動きます。
+基本図形と3Dモデル（GLB）を展示し、選ぶと解説音声が流れる小さなVR展示室です。ビルド不要の静的サイトなので、フォルダをそのままHTTPSで公開すれば動きます。
 
 ## 構成
 
 ```
 vr-gallery/
 ├── index.html                  # 部屋・展示物・カメラ・コントローラー
-├── js/app.js                   # exhibit / info-panel コンポーネント、VR開始ボタン
+├── js/app.js                   # exhibit / fit-size / info-panel コンポーネント、VR開始ボタン
+├── models/vase.glb             # サンプル3Dモデル（約18KB）
+├── audio/*.m4a                 # 解説音声（各展示物1つ、約80〜100KB）
 └── vendor/aframe-v1.7.1.min.js # A-Frame 1.7.1（同梱して固定）
 ```
 
@@ -30,7 +32,7 @@ CDN を使わず `vendor/` に同梱しているので、勝手にバージョ�
 
 ## 軽量化のための工夫
 
-- 3Dモデルや画像ファイルは使わず、A-Frame の基本図形だけで作っています。
+- 3Dモデルは小さなGLB（サンプルは約18KB）、音声はモノラル48kbpsのAACにしています。
 - 壁・床・天井は `flat` シェーダ（ライティング計算なし）で描画し、影もありません。
 - コントローラーの標準モデル（GLB）は読み込まず（`model: false`）、小さな箱で代わりに表示します。
 - 日本語は MSDF フォントを使わず、Canvas に描いてテクスチャとして表示します（フォントファイルは不要）。
@@ -114,10 +116,53 @@ WebXR は HTTPS（または localhost）でしか動きません。静的ファ�
 
 ## 展示物を変えるには
 
-`index.html` の各展示物の `exhibit` 属性を書き換えます。
+各展示物は `exhibit` 属性で設定します。説明文にセミコロン `;` と半角コロン `:` は使えません。
 
 ```html
-exhibit="title: タイトル; body: 説明文; color: #e8a33d"
+exhibit="title: タイトル; body: 説明文; color: #e8a33d; audio: audio/xxx.m4a"
 ```
 
-本体は `a-box` / `a-sphere` / `a-cylinder` / `a-cone` / `a-torus` / `a-icosahedron` など、A-Frame の基本図形なら何でも使えます。説明文にセミコロン `;` は使えません。
+| 項目 | 内容 |
+|---|---|
+| `title` / `body` | 説明パネルに出すタイトルと本文 |
+| `color` | ホバー時の発光色とパネルの帯の色 |
+| `audio` | 選んだときに流す解説音声（省略すると音なし）。パネルを閉じるか別の展示物を選ぶと止まります |
+
+### 3Dモデルを展示する
+
+1. GLBファイルを `models/` に置きます。
+2. `index.html` で、展示物の本体を次の形にします（`position` の y=0.9 は台座の上面）。
+   ```html
+   <a-entity position="0 0.9 0" gltf-model="url(models/xxx.glb)" fit-size="0.5"
+     exhibit="title: …; body: …; color: #3b7fd4; audio: audio/xxx.m4a"></a-entity>
+   ```
+3. `fit-size` に最大辺の長さ（メートル）を指定すると、元のモデルの大きさに関係なくその大きさに縮尺され、底面が台座の上に乗ります。
+
+Quest で快適に動かすための目安は次のとおりです。
+
+- 1つのモデルにつき 2MB 以下、ポリゴンは数万以下、テクスチャは 1024px 以下
+- Draco や meshopt で圧縮したモデルは、別途デコーダーの設定が必要になるので使わないでください
+- 大きいモデルは、[glTF Transform](https://gltf-transform.dev/) でテクスチャを縮小すると軽くなります。
+  ```bash
+  npx @gltf-transform/cli resize in.glb out.glb --width 1024 --height 1024
+  ```
+
+無料のモデルを使うときは、ライセンス（CC0、CC-BY など）と、必要なクレジット表記を確認してください。
+
+### 解説音声を用意する
+
+- 形式は m4a（AAC）か mp3 にしてください。どちらも Quest ブラウザで再生できます。
+- 1本1分以内、モノラル・64kbps 程度にすると軽く済みます。
+- 同梱の `audio/*.m4a` は、macOS の読み上げ（`say -v Kyoko`）で作った**動作確認用の仮音声**です。公開して使い続けるなら、自分で録音したナレーションか、利用条件を確認したTTSサービスの音声に差し替えてください。
+
+Mac では、次の手順で読み上げ音声を作れます（1行目で読み上げを録音し、2行目でAACに変換）。
+
+```bash
+say -v Kyoko -o narration.aiff "ここに解説文を入れます。"
+```
+
+```bash
+afconvert -f m4af -d aac -c 1 -b 64000 narration.aiff audio/narration.m4a
+```
+
+音声は「VRを開始」ボタンを押した後や、展示物をクリックしたときに再生されます。ブラウザは、ユーザーが操作する前に音を自動再生することを許可していないためです。
